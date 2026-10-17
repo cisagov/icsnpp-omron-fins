@@ -1,7 +1,7 @@
 [package]
 script_dir = scripts
 test_command = cd testing && btest -c btest.cfg
-summary = ICSNPP-Omron-FINS (Factory Interface Network) over UDP
+summary = ICSNPP-Omron-FINS (Factory Interface Network) over TCP and UDP
 description = ICSNPP-Omron-FINS is a Spicy based Zeek plugin for
     parsing and logging fields within the Omron FINS protocol.
 depends = 

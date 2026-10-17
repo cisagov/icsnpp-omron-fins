@@ -6,7 +6,7 @@
 | **Development** | ![Build Status](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fparsitects%2Ficsnpp-omron-fins%2Fcommits%2Fmain%2Fstatus&query=state&label=build) | ![Last Build](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fparsitects%2Ficsnpp-omron-fins%2Fcommits%2Fmain%2Fstatus&query=statuses[0].updated_at&label=last%20build&color=lightgrey) |
 
 # ICSNPP-OMRON-FINS
-Industrial Control Systems Network Protocol Parsers (ICSNPP) - Omron FINS (Factory Interface Network Service) over UDP
+Industrial Control Systems Network Protocol Parsers (ICSNPP) - Omron FINS (Factory Interface Network Service) over TCP and UDP
 
 ## Overview
 ICSNPP-Omron-FINS is a Spicy based Zeek plugin for parsing and logging fields within the Omron FINS protocol.
@@ -15,7 +15,7 @@ Omron FINS is a protocol created by Omron Corporation for commuincation between 
 
 The FINS protocol can be addressed to Omron CV-Series PCs (programmable controllers), C-Series PCS, SYSMAC NET Link Units, SYSMAC LINK Support Boards, and CPU Bus Units, such as Personal Computer Units and BASIC Units.
 
-This parser targets the FINS commands available to the CV-Series, C-Series, SYSMAC LINK, and SYSMAC NET PCs transported over UDP.
+This parser targets the FINS commands available to the CV-Series, C-Series, SYSMAC LINK, and SYSMAC NET PCs transported over TCP and UDP.
 
 ## Installation (via zkg)
 
@@ -44,6 +44,29 @@ mkdir build && cd build && cmake .. && make && cd ..
 
 From here you can install the locally built files through `zkg install ./icsnpp-omron-fins` and run it like you would normally.
 Or you can manually run the parser without installing it: `zeek ./build/omron_fins.hlto ./scripts/__load__.zeek  -Cr <pcap>`
+
+## Protocol Detection and Custom Ports
+
+The parser uses port-based detection for both TCP and UDP. The TCP parser validates the `FINS` header after Zeek assigns the connection to the analyzer, but that validation does not activate the analyzer on an otherwise unconfigured port.
+
+To add ports through the environment, provide comma-separated Zeek ports, including each transport suffix:
+
+```bash
+export ZEEK_OMRON_FINS_PORTS=12345/tcp,12345/udp
+```
+
+Alternatively, add TCP and UDP ports to their respective exported sets in Zeek site policy:
+
+```zeek
+redef OMRON_FINS::omron_fins_ports_tcp += { 12345/tcp };
+redef OMRON_FINS::omron_fins_ports_udp += { 12345/udp };
+```
+
+Configure only the transports that carry FINS at your site. The parser adds the final contents of both sets to `likely_server_ports` for direction inference and registers each set with its transport-specific analyzer. Adding a port only to `likely_server_ports` does not enable parsing; analyzer registration is required.
+
+Environment and site-policy changes are read when Zeek starts, so restart or redeploy the affected Zeek processes after changing them. Port configuration alone does not require rebuilding the Spicy analyzer. If you edit an installed package's source instead, reinstall or redeploy the package so the updated script reaches every sensor.
+
+Port registration sends all traffic using a configured server port directly to the corresponding FINS analyzer. Assign only ports dedicated to FINS: unrelated or mixed-protocol traffic can cause parser violations, misleading logs, and unnecessary processing.
 
 
 ## Logging Capabilities
